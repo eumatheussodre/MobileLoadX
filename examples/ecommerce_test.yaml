@@ -1,0 +1,105 @@
+test:
+  name: "E-commerce App Performance Test"
+  duration: 300  # 5 minutos
+
+virtual_users:
+  initial: 1
+  max: 50
+  ramp_up_time: 60  # 1 minuto para alcançar 50 usuários
+
+platforms:
+  - android:
+      app: "./apps/ecommerce-app-release.apk"
+      device: "emulator-5554"
+      capabilities:
+        appium_server_url: "http://localhost:4723"
+        platformVersion: "13.0"
+        deviceName: "Android Emulator"
+        automationName: "UiAutomator2"
+        noReset: true
+
+scenarios:
+  # Cenário 1: Login do usuário (70% dos usuários)
+  - name: "User Login Flow"
+    weight: 70
+    actions:
+      - wait: 
+          timeout: 2
+      
+      - tap: 
+          id: "com.example.ecommerce:id/username"
+      
+      - input: 
+          text: "testuser@example.com"
+      
+      - tap: 
+          id: "com.example.ecommerce:id/password"
+      
+      - input: 
+          text: "password123"
+      
+      - tap: 
+          id: "com.example.ecommerce:id/loginButton"
+      
+      - wait: 
+          timeout: 3
+
+  # Cenário 2: Navegação e busca de produtos (30% dos usuários)
+  - name: "Browse and Search Products"
+    weight: 30
+    actions:
+      - wait: 
+          timeout: 2
+      
+      - tap: 
+          id: "com.example.ecommerce:id/productsTab"
+      
+      - wait: 
+          timeout: 1
+      
+      - scroll: 
+          direction: "down"
+          duration: 2
+      
+      - scroll: 
+          direction: "down"
+          duration: 2
+      
+      - tap: 
+          xpath: "//android.widget.TextView[@text='Electronics']"
+      
+      - wait: 
+          timeout: 2
+      
+      - tap: 
+          id: "com.example.ecommerce:id/searchButton"
+      
+      - input: 
+          id: "com.example.ecommerce:id/searchInput"
+          text: "laptop"
+      
+      - wait: 
+          timeout: 2
+      
+      - tap: 
+          xpath: "(//android.widget.ImageView[@content-desc='Product Image'])[1]"
+      
+      - wait: 
+          timeout: 1
+
+# Métricas a serem coletadas
+metrics:
+  collect:
+    - cpu
+    - memory
+    - battery
+    - network
+    - fps
+  interval: 1  # coletar a cada 1 segundo
+
+# Thresholds (limites aceitáveis)
+thresholds:
+  cpu_max: 80              # CPU não deve ultrapassar 80%
+  memory_max: 300          # Memória não deve ultrapassar 300MB
+  response_time_p95: 2000  # 95% das ações devem completar em até 2s
+  error_rate_max: 5        # Taxa de erro máxima de 5%

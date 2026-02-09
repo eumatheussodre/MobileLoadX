@@ -1,0 +1,11 @@
+# Core dependencies
+Appium-Python-Client>=2.11.0
+selenium>=4.15.0
+PyYAML>=6.0
+click>=8.1.0
+colorama>=0.4.6
+psutil>=5.9.0
+
+# Optional but recommended
+pytest>=7.4.0
+requests>=2.31.0
