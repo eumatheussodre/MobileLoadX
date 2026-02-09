@@ -185,8 +185,8 @@ mobileloadx/
 ## ❓ Dúvidas
 
 Abra uma issue com a tag `question` ou entre em contato:
-- Email: team@mobileloadx.dev
-- Discord: [Link]
+- Email: matheusssoddre98@gmail.com
+- Discord: N/A
 
 ## 📜 Licença
 
