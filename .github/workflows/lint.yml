@@ -1,0 +1,68 @@
+name: Lint & Type Checking
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Format check with black
+      run: |
+        black --check mobileloadx tests
+    
+    - name: Sort imports with isort
+      run: |
+        isort --check-only mobileloadx tests
+    
+    - name: Lint with flake8
+      run: |
+        flake8 mobileloadx tests --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 mobileloadx tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+    
+    - name: Type checking with mypy
+      run: |
+        mypy mobileloadx --ignore-missing-imports --no-implicit-optional
+      continue-on-error: true
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+    
+    - name: Check security issues with bandit
+      run: |
+        bandit -r mobileloadx -ll
+      continue-on-error: true
+    
+    - name: Check dependencies with safety
+      run: |
+        safety check --json
+      continue-on-error: true

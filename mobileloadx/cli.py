@@ -5,19 +5,21 @@ Interface de linha de comando para MobileLoadX
 import click
 import logging
 import sys
+import json
 from pathlib import Path
+from typing import Dict, Any
+from datetime import datetime
 
 from .core.load_test import LoadTest
 from .reporting.report_generator import ReportGenerator
+from .schema_validator import SchemaValidator
+from .logging_setup import setup_logging, get_logger
+from .plugins.base import get_plugin_manager
+from .config.loader import ConfigLoader
 
 
 # Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-logger = logging.getLogger(__name__)
+logger = get_logger('cli')
 
 
 @click.group()
@@ -269,6 +271,210 @@ thresholds:
     click.secho(f"✅ Arquivo criado: {config_file}", fg='green')
     click.echo("\nEdite o arquivo e execute:")
     click.echo(f"  mobileloadx run {config_file}")
+
+
+@main.command()
+@click.argument('config_file', type=click.Path(exists=True))
+@click.option('--strict', is_flag=True, help='Modo strict (falha em qualquer erro)')
+def validate(config_file, strict):
+    """
+    Valida configuração de teste
+    
+    \b
+    Exemplo:
+        mobileloadx validate config.yaml
+        mobileloadx validate config.yaml --strict
+    """
+    try:
+        click.echo(f"🔍 Validando: {config_file}")
+        
+        validator = SchemaValidator()
+        valid, errors = validator.validate_file(config_file)
+        
+        if valid:
+            # Carregar para validações adicionais
+            config = ConfigLoader.load(config_file)
+            
+            click.secho("✅ Configuração válida!", fg='green')
+            click.echo(f"\n📋 RESUMO DA CONFIGURAÇÃO")
+            click.echo(f"  Nome: {config.get('name', 'N/A')}")
+            click.echo(f"  Duração: {config.get('duration', 'N/A')}s")
+            click.echo(f"  Usuários: {config.get('virtual_users', 'N/A')}")
+            click.echo(f"  Plataformas: {len(config.get('platforms', []))}")
+            click.echo(f"  Cenários: {len(config.get('scenarios', []))}")
+            
+            sys.exit(0)
+        else:
+            click.secho("❌ Erros encontrados:", fg='red')
+            for error in errors:
+                click.echo(f"  • {error}")
+            
+            if strict:
+                sys.exit(1)
+            else:
+                click.echo("\nUse --strict para falhar em erros de validação")
+                sys.exit(0)
+    
+    except Exception as e:
+        click.secho(f"❌ Erro ao validar: {e}", fg='red')
+        sys.exit(1)
+
+
+@main.command()
+@click.option('--plugin', type=str, help='Carregar plugin específico')
+def plugins(plugin):
+    """
+    Gerencia plugins do MobileLoadX
+    
+    \b
+    Exemplo:
+        mobileloadx plugins
+        mobileloadx plugins --plugin CustomMetrics
+    """
+    try:
+        manager = get_plugin_manager()
+        
+        if plugin:
+            # Mostrar informações de um plugin específico
+            p = manager.get_plugin(plugin)
+            if not p:
+                click.secho(f"❌ Plugin não encontrado: {plugin}", fg='red')
+                sys.exit(1)
+            
+            info = p.get_info()
+            click.echo(f"📦 {info.name}")
+            click.echo(f"  Versão: {info.version}")
+            click.echo(f"  Descrição: {info.description}")
+            click.echo(f"  Autor: {info.author}")
+            if info.dependencies:
+                click.echo(f"  Dependências: {', '.join(info.dependencies)}")
+        else:
+            # Listar todos os plugins
+            plugins_list = manager.list_plugins()
+            
+            if not plugins_list:
+                click.echo("📦 Nenhum plugin registrado")
+            else:
+                click.echo("📦 PLUGINS REGISTRADOS")
+                for info in plugins_list:
+                    click.echo(f"  • {info.name} v{info.version}")
+                    click.echo(f"    {info.description}")
+    
+    except Exception as e:
+        click.secho(f"❌ Erro: {e}", fg='red')
+        sys.exit(1)
+
+
+@main.command()
+@click.argument('report1', type=click.Path(exists=True))
+@click.argument('report2', type=click.Path(exists=True))
+@click.option('--format', type=click.Choice(['text', 'json']), default='text',
+              help='Formato de saída')
+def compare(report1, report2, format):
+    """
+    Compara dois testes
+    
+    \b
+    Exemplo:
+        mobileloadx compare ./test1/report.json ./test2/report.json
+        mobileloadx compare report1.json report2.json --format json
+    """
+    try:
+        with open(report1, 'r') as f:
+            data1 = json.load(f)
+        with open(report2, 'r') as f:
+            data2 = json.load(f)
+        
+        comparison = {
+            'report1': Path(report1).name,
+            'report2': Path(report2).name,
+            'metrics': {}
+        }
+        
+        # Comparar métricas principais
+        metrics = [
+            'response_time_avg',
+            'response_time_p95',
+            'error_rate',
+            'success_rate',
+            'avg_cpu',
+            'peak_memory'
+        ]
+        
+        for metric in metrics:
+            v1 = data1.get(metric, 0)
+            v2 = data2.get(metric, 0)
+            
+            if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+                diff = v2 - v1
+                percentage = (diff / v1 * 100) if v1 != 0 else 0
+                
+                comparison['metrics'][metric] = {
+                    'test1': v1,
+                    'test2': v2,
+                    'difference': diff,
+                    'percentage': percentage
+                }
+        
+        if format == 'json':
+            click.echo(json.dumps(comparison, indent=2))
+        else:
+            click.echo("📊 COMPARAÇÃO DE TESTES")
+            click.echo("="*60)
+            click.echo(f"Test 1: {comparison['report1']}")
+            click.echo(f"Test 2: {comparison['report2']}")
+            click.echo("="*60)
+            
+            for metric, values in comparison['metrics'].items():
+                v1 = values['test1']
+                v2 = values['test2']
+                p = values['percentage']
+                
+                direction = "📈" if p > 0 else "📉" if p < 0 else "↔️ "
+                click.echo(f"\n{metric}:")
+                click.echo(f"  Test 1: {v1:.2f}")
+                click.echo(f"  Test 2: {v2:.2f}")
+                click.echo(f"  {direction} Mudança: {p:+.1f}%")
+    
+    except json.JSONDecodeError:
+        click.secho("❌ Erro ao ler arquivo JSON", fg='red')
+        sys.exit(1)
+    except Exception as e:
+        click.secho(f"❌ Erro ao comparar: {e}", fg='red')
+        sys.exit(1)
+
+
+@main.command()
+@click.option('--log-level', type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR']),
+              default='INFO', help='Nível de log')
+@click.option('--log-file', type=str, help='Arquivo para salvar logs')
+@click.option('--json-logs', is_flag=True, help='Usar formato JSON para logs')
+def configure_logging(log_level, log_file, json_logs):
+    """
+    Configura sistema de logging
+    
+    \b
+    Exemplo:
+        mobileloadx configure-logging --log-level DEBUG
+        mobileloadx configure-logging --log-file app.log --json-logs
+    """
+    try:
+        setup_logging(
+            level=log_level,
+            log_file=log_file,
+            json_format=json_logs,
+            log_dir='./logs'
+        )
+        
+        click.secho("✅ Logging configurado!", fg='green')
+        click.echo(f"  Nível: {log_level}")
+        if log_file:
+            click.echo(f"  Arquivo: {log_file}")
+        click.echo(f"  Formato: {'JSON' if json_logs else 'Texto'}")
+    
+    except Exception as e:
+        click.secho(f"❌ Erro ao configurar logging: {e}", fg='red')
+        sys.exit(1)
 
 
 if __name__ == '__main__':

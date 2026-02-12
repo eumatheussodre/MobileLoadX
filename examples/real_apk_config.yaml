@@ -1,0 +1,166 @@
+# Configuração exemplo para testar um APK real
+# Substitua os IDs e XPaths pelos do seu app
+
+name: "Real APK Performance Test"
+duration: 300        # 5 minutos
+virtual_users: 3     # 3 usuários simultâneos
+ramp_up_time: 30     # Rampar em 30s
+
+platforms:
+  - platform: android
+    app: "/path/to/your-application.apk"
+    
+    # ID do device/emulador (obter com: adb devices)
+    devices:
+      - emulator-5554
+    
+    capabilities:
+      # Servidor Appium rodando
+      appium_server_url: "http://localhost:4723"
+      
+      # Tipo de automatização
+      automationName: "UiAutomator2"
+      
+      # Versão do Android do device
+      platformVersion: "13"
+      
+      # Nome do device
+      deviceName: "Pixel 5"
+      
+      # Timeout de comando
+      newCommandTimeout: 300
+      
+      # Permissões automáticas
+      autoGrantPermissions: true
+      
+      # Não usar webview (usar app nativa)
+      autoWebview: false
+      
+      # Iniciar apk limpa (opcional)
+      noReset: false
+
+scenarios:
+  # Cenário 1: Login e Browse (70% do tempo)
+  - name: "Login and Browse"
+    weight: 70
+    actions:
+      # Esperar app carregar
+      - type: wait
+        timeout: 3
+      
+      # Clicar no campo de email
+      # SUBSTITUA pelos IDs/XPath do seu app
+      - type: tap
+        id: "com.example.myapp:id/email_field"
+      
+      # Digitar email
+      - type: input
+        text: "testuser@example.com"
+      
+      # Clicar no campo de senha
+      - type: tap
+        xpath: "//android.widget.EditText[@password='true']"
+      
+      # Digitar senha
+      - type: input
+        text: "Test123@Pass"
+      
+      # Clicar botão Login
+      - type: tap
+        id: "com.example.myapp:id/login_button"
+      
+      # Esperar login completar
+      - type: wait
+        timeout: 3
+      
+      # Scroll down na página inicial
+      - type: scroll
+        direction: "down"
+        duration: 1.5
+      
+      # Esperar um pouco
+      - type: wait
+        timeout: 1
+      
+      # Scroll up
+      - type: scroll
+        direction: "up"
+        duration: 1.5
+      
+      # Clique em algum item da lista
+      - type: tap
+        xpath: "//android.view.ViewGroup[@class='android.widget.FrameLayout'][1]"
+      
+      # Esperar abrir detalhe
+      - type: wait
+        timeout: 2
+      
+      # Voltar
+      - type: back
+
+  # Cenário 2: Busca (30% do tempo)
+  - name: "Search Products"
+    weight: 30
+    actions:
+      # Esperar carregar
+      - type: wait
+        timeout: 2
+      
+      # Clicar barra de busca
+      - type: tap
+        id: "com.example.myapp:id/search_bar"
+      
+      # Digitar termo de busca
+      - type: input
+        text: "laptop"
+      
+      # Esperar resultados
+      - type: wait
+        timeout: 2
+      
+      # Scroll nos resultados
+      - type: scroll
+        direction: "down"
+        duration: 1
+      
+      # Clicar no primeiro resultado
+      - type: tap
+        xpath: "//android.widget.ListView/android.widget.LinearLayout[1]"
+      
+      # Esperar detalhe
+      - type: wait
+        timeout: 2
+      
+      # Voltar
+      - type: back
+      
+      # Limpar busca
+      - type: tap
+        id: "com.example.myapp:id/clear_search"
+
+thresholds:
+  # Tempo de resposta máximo em P95
+  response_time_p95: 2500      # 2.5 segundos
+  
+  # Tempo de resposta máximo em P99
+  response_time_p99: 4000      # 4 segundos
+  
+  # Taxa de erro máxima
+  error_rate: 0.05             # 5%
+  
+  # CPU máximo médio
+  cpu_max: 80                  # 80%
+  
+  # Memória máxima
+  memory_max: 400              # 400 MB
+
+metrics:
+  # Métricas a coletar
+  collect:
+    - cpu
+    - memory
+    - battery
+    - network
+  
+  # Intervalo de coleta
+  interval: 2                  # A cada 2 segundos
