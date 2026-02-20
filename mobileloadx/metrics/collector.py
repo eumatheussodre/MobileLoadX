@@ -69,21 +69,27 @@ class MetricsCollector:
     
     def _collect_device_metrics(self) -> Dict[str, Any]:
         """
-        Coleta métricas do device
-        
+        Coleta métricas do device conforme configurado em self.collect.
+
         Nota: Implementação simplificada. Em produção, usar ferramentas
-        específicas como adb para Android e Instruments para iOS
+        específicas como adb para Android e Instruments para iOS.
+        FPS está planejado (não implementado).
         """
         timestamp = datetime.now()
-        
-        metrics = {
-            "timestamp": timestamp.isoformat(),
-            "cpu": self._get_cpu_usage(),
-            "memory": self._get_memory_usage(),
-            "battery": self._get_battery_info(),
-            "network": self._get_network_stats(),
-        }
-        
+        metrics = {"timestamp": timestamp.isoformat()}
+
+        if "cpu" in self.collect:
+            metrics["cpu"] = self._get_cpu_usage()
+        if "memory" in self.collect:
+            metrics["memory"] = self._get_memory_usage()
+        if "battery" in self.collect:
+            metrics["battery"] = self._get_battery_info()
+        if "network" in self.collect:
+            metrics["network"] = self._get_network_stats()
+        if "fps" in self.collect:
+            # FPS: planejado (coleta via adb/iOS ainda não implementada)
+            metrics["fps"] = None
+
         return metrics
     
     def _get_cpu_usage(self) -> Optional[float]:
@@ -238,7 +244,10 @@ class MetricsCollector:
         cpu_values = [m['cpu'] for m in self.device_metrics if m.get('cpu') is not None]
         avg_cpu = sum(cpu_values) / len(cpu_values) if cpu_values else 0
         
-        memory_total_values = [m['memory']['total'] for m in self.device_metrics if m.get('memory')]
+        memory_total_values = [
+            m['memory']['total'] for m in self.device_metrics
+            if m.get('memory') and isinstance(m.get('memory'), dict) and 'total' in m.get('memory', {})
+        ]
         avg_memory = sum(memory_total_values) / len(memory_total_values) if memory_total_values else 0
         peak_memory = max(memory_total_values) if memory_total_values else 0
         

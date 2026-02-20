@@ -53,7 +53,7 @@ class TestConfigLoader:
         
         # Verificar se pode ser relido
         loaded_config = ConfigLoader.load(str(output_file))
-        assert loaded_config['name'] == config_dict['name']
+        assert loaded_config['test']['name'] == config_dict['test']['name']
     
     def test_save_json(self, temp_dir, config_dict):
         """Testa salvamento de configuração em JSON"""
@@ -65,7 +65,7 @@ class TestConfigLoader:
         
         # Verificar se pode ser relido
         loaded_config = ConfigLoader.load(str(output_file))
-        assert loaded_config['name'] == config_dict['name']
+        assert loaded_config['test']['name'] == config_dict['test']['name']
     
     def test_save_unsupported_format(self, temp_dir, config_dict):
         """Testa erro ao salvar com formato não suportado"""
@@ -83,7 +83,7 @@ class TestConfigLoader:
             yaml.dump(config_dict, f)
         
         config = ConfigLoader.load(str(config_file))
-        assert config['name'] == 'Test Load Test'
+        assert config['test']['name'] == 'Test Load Test'
     
     def test_load_preserves_structure(self, yaml_config_file):
         """Testa se carregamento preserva estrutura aninhada"""

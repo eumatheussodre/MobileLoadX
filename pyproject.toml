@@ -8,9 +8,9 @@ version = "1.0.0"
 description = "Framework de Performance Testing para Apps Mobile - Simule múltiplos usuários simultâneos e colete métricas detalhadas"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
-    { name = "MobileLoadX Team", email = "team@mobileloadx.com" }
+    { name = "MobileLoadX Team", email = "matheusssodre98@gmail.com" }
 ]
 keywords = [
     "mobile",
@@ -24,7 +24,6 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: Portuguese (Brazilian)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -61,16 +60,17 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mobileloadx/mobileloadx"
-Documentation = "https://github.com/mobileloadx/mobileloadx/wiki"
-Repository = "https://github.com/mobileloadx/mobileloadx.git"
-Issues = "https://github.com/mobileloadx/mobileloadx/issues"
+Homepage = "https://github.com/eumatheussodre/mobileloadx"
+Documentation = "https://github.com/eumatheussodre/mobileloadx/wiki"
+Repository = "https://github.com/eumatheussodre/mobileloadx.git"
+Issues = "https://github.com/eumatheussodre/mobileloadx/issues"
 
 [project.scripts]
 mobileloadx = "mobileloadx.cli:main"
 
-[tool.setuptools]
-packages = ["mobileloadx"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mobileloadx", "mobileloadx.*"]
 
 [tool.black]
 line-length = 120

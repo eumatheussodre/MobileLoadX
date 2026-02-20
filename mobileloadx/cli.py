@@ -296,10 +296,15 @@ def validate(config_file, strict):
             config = ConfigLoader.load(config_file)
             
             click.secho("✅ Configuração válida!", fg='green')
+            test_cfg = config.get('test', {})
+            vu_cfg = config.get('virtual_users', {})
+            name = test_cfg.get('name', config.get('name', 'N/A'))
+            duration = test_cfg.get('duration', config.get('duration', 'N/A'))
+            users = vu_cfg.get('max', config.get('virtual_users', 'N/A'))
             click.echo(f"\n📋 RESUMO DA CONFIGURAÇÃO")
-            click.echo(f"  Nome: {config.get('name', 'N/A')}")
-            click.echo(f"  Duração: {config.get('duration', 'N/A')}s")
-            click.echo(f"  Usuários: {config.get('virtual_users', 'N/A')}")
+            click.echo(f"  Nome: {name}")
+            click.echo(f"  Duração: {duration}s")
+            click.echo(f"  Usuários máx: {users}")
             click.echo(f"  Plataformas: {len(config.get('platforms', []))}")
             click.echo(f"  Cenários: {len(config.get('scenarios', []))}")
             

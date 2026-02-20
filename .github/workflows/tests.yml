@@ -80,3 +80,16 @@ jobs:
     - name: Run slow tests
       run: |
         pytest tests/ -v -m slow --timeout=300
+
+  validate-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: pip install -e .
+      - name: Validate example config
+        run: |
+          mobileloadx validate examples/example_load_test/config.yaml

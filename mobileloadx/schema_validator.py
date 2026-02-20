@@ -10,35 +10,47 @@ from pathlib import Path
 class SchemaValidator:
     """Valida esquema de configuração YAML"""
     
-    # Schema padrão do MobileLoadX
+    # Schema padrão (formato README: test, virtual_users objeto, platforms com android/ios)
     DEFAULT_SCHEMA = {
         'type': 'object',
         'properties': {
-            'name': {'type': 'string'},
-            'duration': {'type': 'integer', 'minimum': 1},
-            'virtual_users': {'type': 'integer', 'minimum': 1},
-            'ramp_up_time': {'type': 'integer', 'minimum': 0},
+            'test': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'duration': {'type': 'integer', 'minimum': 1},
+                },
+                'required': ['name', 'duration']
+            },
+            'virtual_users': {
+                'type': 'object',
+                'properties': {
+                    'initial': {'type': 'integer', 'minimum': 0},
+                    'max': {'type': 'integer', 'minimum': 1},
+                    'ramp_up_time': {'type': 'integer', 'minimum': 0},
+                },
+                'required': ['max']
+            },
             'platforms': {
                 'type': 'array',
+                'minItems': 1,
                 'items': {
                     'type': 'object',
-                    'properties': {
-                        'platform': {
-                            'type': 'string',
-                            'enum': ['android', 'ios']
-                        },
-                        'app': {'type': 'string'},
-                        'devices': {
-                            'type': 'array',
-                            'items': {'type': 'string'}
-                        },
-                        'capabilities': {'type': 'object'}
-                    },
-                    'required': ['platform', 'app']
+                    'additionalProperties': {
+                        'type': 'object',
+                        'properties': {
+                            'app': {'type': 'string'},
+                            'device': {'type': 'string'},
+                            'devices': {'type': 'array', 'items': {'type': 'string'}},
+                            'capabilities': {'type': 'object'},
+                            'distribute': {'type': 'string'},
+                        }
+                    }
                 }
             },
             'scenarios': {
                 'type': 'array',
+                'minItems': 1,
                 'items': {
                     'type': 'object',
                     'properties': {
@@ -57,7 +69,7 @@ class SchemaValidator:
                 'properties': {
                     'response_time_p95': {'type': 'number'},
                     'response_time_p99': {'type': 'number'},
-                    'error_rate': {'type': 'number'},
+                    'error_rate_max': {'type': 'number'},
                     'cpu_max': {'type': 'number'},
                     'memory_max': {'type': 'number'}
                 }
@@ -69,11 +81,11 @@ class SchemaValidator:
                         'type': 'array',
                         'items': {'type': 'string'}
                     },
-                    'interval': {'type': 'number'}
+                    'interval': {'type': 'number', 'minimum': 0.1}
                 }
             }
         },
-        'required': ['name', 'duration', 'virtual_users', 'platforms', 'scenarios']
+        'required': ['test', 'virtual_users', 'platforms', 'scenarios']
     }
     
     def __init__(self, schema: Optional[Dict[str, Any]] = None):
@@ -115,6 +127,18 @@ class SchemaValidator:
                 field_errors = self._validate_field(field, value, field_schema)
                 errors.extend(field_errors)
         
+        # Validação customizada: platforms deve ter itens { android: {...} } ou { ios: {...} }
+        if 'platforms' in data and isinstance(data['platforms'], list):
+            for i, item in enumerate(data['platforms']):
+                if not isinstance(item, dict) or len(item) != 1:
+                    errors.append(f"platforms[{i}]: cada item deve ser um objeto com uma chave 'android' ou 'ios'")
+                else:
+                    key = list(item.keys())[0]
+                    if key not in ('android', 'ios'):
+                        errors.append(f"platforms[{i}]: chave deve ser 'android' ou 'ios', recebeu '{key}'")
+                    elif not item[key].get('app'):
+                        errors.append(f"platforms[{i}].{key}: campo 'app' é obrigatório")
+        
         return len(errors) == 0, errors
     
     def _validate_field(self, name: str, value: Any, schema: Dict[str, Any]) -> List[str]:
@@ -144,6 +168,9 @@ class SchemaValidator:
                 errors.append(f"Campo '{name}' deve ser um de {enum_values}")
         
         elif field_type == 'array':
+            min_items = schema.get('minItems', 0)
+            if len(value) < min_items:
+                errors.append(f"Campo '{name}' deve ter no mínimo {min_items} item(ns), tem {len(value)}")
             items_schema = schema.get('items', {})
             for i, item in enumerate(value):
                 item_errors = self._validate_field(f"{name}[{i}]", item, items_schema)
@@ -151,6 +178,10 @@ class SchemaValidator:
         
         elif field_type == 'object':
             if isinstance(value, dict):
+                # Campos obrigatórios do objeto
+                for req in schema.get('required', []):
+                    if req not in value:
+                        errors.append(f"Campo obrigatório ausente: '{name}.{req}'")
                 properties = schema.get('properties', {})
                 for prop_name, prop_schema in properties.items():
                     if prop_name in value:

@@ -304,7 +304,8 @@ test.add_plugin(CustomMetricsPlugin())
 - [API Reference](./docs/API.md)
 - [Exemplos](./examples/)
 - [Troubleshooting](./docs/TROUBLESHOOTING.md)
- - [Motivação do Projeto](./docs/PROJECT_MOTIVATION.md) — contexto e justificativa para a criação do framework
+- [Melhorias Realizadas](./docs/MELHORIAS_REALIZADAS.md)
+- [Como testar as melhorias](./docs/COMO_TESTAR_MELHORIAS.md) — verificar se as melhorias surtiram efeito
 
 ## 🤝 Contribuindo
 
